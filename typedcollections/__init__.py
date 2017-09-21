@@ -20,7 +20,7 @@ class TypedList(UserList):
 
     def _check(self, a):
         if not isinstance(a, self.__class__.type):
-            raise TypeError('{} expect {} type but found {}.'.format(self.__class__.__name__, a, self.__class__.type, type(a)))
+            raise TypeError('{} expect {} type but found {}.'.format(self.__class__.__name__, self.__class__.type, type(a)))
     
     def __init__(self, *args):
         super().__init__()
