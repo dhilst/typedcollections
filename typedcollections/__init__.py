@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABCMeta
 from collections import UserDict, UserList
 
 class TypedList(UserList):
@@ -69,18 +70,18 @@ class TypedDict(UserDict):
     ...     zar = str,type(None)
     ...
     >>> f = FooDict(foo=1, bar=FooList(1,2,3), tar=FooMultiList(1,'foo'), zar='hello')
-    >>> f
-    {'foo': 1, 'bar': [1, 2, 3], 'tar': [1, 'foo'], 'zar': 'hello'}
+    >>> # {'foo': 1, 'bar': [1, 2, 3], 'tar': [1, 'foo'], 'zar': 'hello'}
     >>>
     >>> f['foo'] = 'invalid' # Setting to invalid type raise exceptions.
     Traceback (most recent call last):
     ...
-    TypeError: FooDict["foo"] expect on of (<class 'int'>,) but found <class 'str'>.
+    TypeError: FooDict["foo"] expect one of (<class 'int'>,) but found <class 'str'>.
     >>>
     >>> f['bar'][0] = 'invalid' # Also true for TypedList.
     Traceback (most recent call last):
     ...
-    TypeError: FooList expect invalid type but found (<class 'int'>,).
+    TypeError: FooList expect (<class 'int'>,) type but found <class 'str'>.
+    >>> 
     >>> f['tar'][0] = 2 # No problem
     >>> f['tar'][0] = 'invalid' # ops wrong value
     Traceback (most recent call last):
@@ -90,12 +91,12 @@ class TypedDict(UserDict):
     >>> FooDict(foo='invalid') # Instantiation is protected too.
     Traceback (most recent call last):
     ...
-    TypeError: FooDict["foo"] expect on of (<class 'int'>,) but found <class 'str'>.
+    TypeError: FooDict["foo"] expect one of (<class 'int'>,) but found <class 'str'>.
     >>>
     >>> FooList('invalid') # Also true for lists.
     Traceback (most recent call last):
     ...
-    TypeError: FooList expect invalid type but found (<class 'int'>,).
+    TypeError: FooList expect (<class 'int'>,) type but found <class 'str'>.
     ''' 
 
     def _check(self, k, v):
@@ -114,4 +115,44 @@ class TypedDict(UserDict):
         self.data[k] = v
 
 
+from functools import wraps
+from itertools import takewhile
 
+def checkarguments(*t_args, **t_kwargs):
+    '''
+    >>> @checkarguments(int, int, int)
+    ... def foo(a,b,c):
+    ...    return a + b + c
+    ...
+    >>> foo(1,2,3)
+    6
+    >>> foo('foo',2,3)
+    Traceback (most recent call last):
+    ...
+    TypeError: foo positional argument 0 expects <class 'int'> but <class 'str'> found.
+    >>>
+    >>> @checkarguments(a=int, b=int, c=int)
+    ... def bar(*args,a,b,c):
+    ...     return a + b + c
+    ...
+    >>> bar(a=1,b=2,c=3)
+    6
+    >>> bar(a='str',b=2,c=3)
+    Traceback (most recent call last):
+    ...
+    TypeError: bar() keyword argument "a" expects <class 'int'> but <class 'str'> found.
+    '''
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for i, (t, v) in enumerate(zip(t_args, args)):
+                if not isinstance(v, (t,)):
+                    raise TypeError('{} positional argument {} expects {} but {} found.'\
+                                    .format(func.__name__, i, t, type(v)))
+            for (tk, tv), (ak, av) in (zip(t_kwargs.items(), kwargs.items())):
+                if not isinstance(av, (tv,)):
+                    raise TypeError('{}() keyword argument "{}" expects {} but {} found.'\
+                            .format(func.__name__, ak, tv, type(av)))
+            return func(*args, **kwargs)
+        return wrapper 
+    return decorator
