@@ -101,7 +101,7 @@ class TypedDict(UserDict):
     def _check(self, k, v):
         t = getattr(self.__class__, k)
         if not isinstance(v,t):
-            raise TypeError('{}["{}"] expect on of {} but found {}.'.format(self.__class__.__name__, k, t, type(v)))
+            raise TypeError('{}["{}"] expect one of {} but found {}.'.format(self.__class__.__name__, k, t, type(v)))
 
     def __init__(self, **kwargs):
         super().__init__()
