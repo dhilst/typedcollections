@@ -12,6 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+'''
+Overview
+--------
+
+Each class at this library represents a typed data structure. The types
+are enforced at intialization and when setting a value too. The user
+must subclass the desired type and parametrize using class attributes.
+
+Each class attribute is a tuple of possible values. The types are checked
+using issubclass builting function. Check the docstring of each class for
+examples.
+
+There is a decorator for checking function parameters too.
+
+When running in optimized mode the classes are noped and no parameter checking
+happens. So no performance penality should be noticed.
+'''
+
 import six
 from functools import wraps
 try:
@@ -20,10 +38,19 @@ except ImportError:
     from UserDict import UserDict
     from UserList import UserList
 
-
 if __debug__:
     class TypedList(UserList):
-        '''Check MultiTypedDict.'''
+        '''
+        Single type list. Values type are defined by type class
+        attribute, which is a tuple of possible types.
+
+        >>> class FooTL(TypedList):
+        ...     type = int,
+        ...
+        >>> foo = FooTL(1,2,3,4)
+        >>> foo == [1,2,3,4]
+        True
+        '''
         type = type(None),
 
         def _check(self, a):
@@ -41,6 +68,19 @@ if __debug__:
             self.data[item] = val 
 
     class TypedDict(UserDict):
+        '''
+        Single type dict. Key type is defined by 
+        key_type class attribute (default is str). Value type is defined
+        by value_type class attribute (default is type(None), which is useless).
+
+        >>> class FooTD(TypedDict):
+        ...    value_type = int, # Types must be a tuple.
+        ...
+        >>> foo = FooTD(foo=1,bar=2)
+        >>> foo == {'foo': 1, 'bar': 2}
+        True
+        '''
+
         key_type = str,
         value_type = type(None),
 
@@ -52,6 +92,18 @@ if __debug__:
             self.data[key] = val
 
     class MultiTypedList(UserList):
+        '''
+        Multi typed list.
+        
+        Types are positionally defined by assigning a tuple of types to list.
+        
+        >>> class FooMTL(MultiTypedList):
+        ...     type = int,int,str
+        ...
+        >>> f = FooMTL(1,1,'hello')
+        >>> f == [1,1,'hello']
+        True
+        '''
         type = type(None),
 
         def _check(self, i, v):
@@ -75,7 +127,7 @@ if __debug__:
         Types are defined using class attributes.
 
         >>> class FooMTD(MultiTypedDict):
-        ...     foo = int,
+        ...     foo = int, # Types must be a tuple
         ...     bar = str,
         ...
         >>> f = FooMTD(foo=1, bar='str')
