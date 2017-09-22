@@ -58,7 +58,7 @@ if __debug__:
                 raise TypeError('{} expect {} type but found {}.'.format(self.__class__.__name__, self.__class__.type, type(a)))
         
         def __init__(self, *args):
-            super(TypedList, self).__init__()
+            UserList.__init__(self)
             for a in args:
                 self._check(a)
             self.data = list(args)
@@ -121,7 +121,7 @@ if __debug__:
                 raise TypeError('{} expect {} type but found {}.'.format(self.__class__.__name__, self.__class__.type[i], type(v)))
 
         def __init__(self, *args):
-            super(MultiTypedList, self).__init__()
+            UserList.__init__(self)
             for i, v in enumerate(args):
                 self._check(i, v)
             self.data = list(args)
@@ -167,11 +167,11 @@ if __debug__:
 else:
     class BaseDict(UserDict):
         def __init__(self, **kwargs):
-            super(BaseDict, self).__init__(kwargs)
+            UserDict.__init__(self, kwargs)
 
     class BaseList(UserList):
         def __init__(self, *args):
-            super(BaseList, self).__init__(args)
+            UserList.__init__(self, args)
 
     class MultiTypedDict(BaseDict): pass
     class MultiTypedList(BaseList): pass
