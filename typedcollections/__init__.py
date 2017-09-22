@@ -89,6 +89,11 @@ if __debug__:
         key_type = str,
         value_type = type(None),
 
+        def __init__(self, **kwargs):
+            UserDict.__init__(self)
+            for k, v in six.iteritems(kwargs):
+                self[k] = v
+
         def __setitem__(self, key, val):
             if not issubclass(type(key), self.__class__.key_type):
                 raise TypeError('{} keys expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.key_type, type(key)))

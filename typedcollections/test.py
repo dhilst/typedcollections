@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
             self.assertRaises(TypeError, MyTL,'str')
             def raiseTE(): mtd['i'] = 'not an int'
             self.assertRaises(TypeError, raiseTE)
-            def raiseTE(): mlt[0] = 'str'
+            def raiseTE(): mtl[0] = 'str'
             self.assertRaises(TypeError, raiseTE)
             def raiseTE(): td['a'] = 'str'
             self.assertRaises(TypeError, raiseTE)
