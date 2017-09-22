@@ -7,8 +7,8 @@ setup(
     author='Daniel Hilst Selli',
     author_email='danielhilst@gmail.com',
     packages=['typedcollections'],
-    license='Apache 2.0',
+    license='Apache Software License 2.0',
     url='https://github.com/dhilst/typedcollections.git',
-    python_requires='>=3.4',
+    install_requires=['six'],
 )
 
