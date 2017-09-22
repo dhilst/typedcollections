@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABCMeta
-from collections import UserDict, UserList
+import six
 from functools import wraps
+try:
+    from collections import UserDict, UserList
+except ImportError:
+    from UserDict import UserDict
+    from UserList import UserList
+
 
 if __debug__:
     class TypedList(UserList):
@@ -26,7 +31,7 @@ if __debug__:
                 raise TypeError('{} expect {} type but found {}.'.format(self.__class__.__name__, self.__class__.type, type(a)))
         
         def __init__(self, *args):
-            super().__init__()
+            super(TypedList, self).__init__()
             for a in args:
                 self._check(a)
             self.data = list(args)
@@ -34,6 +39,17 @@ if __debug__:
         def __setitem__(self, item, val):
             self._check(val)
             self.data[item] = val 
+
+    class TypedDict(UserDict):
+        key_type = str,
+        value_type = type(None),
+
+        def __setitem__(self, key, val):
+            if not issubclass(type(key), self.__class__.key_type):
+                raise TypeError('{} keys expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.key_type, type(key)))
+            if not issubclass(type(val), self.__class__.value_type):
+                raise TypeError('{} keys expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.value_type, type(value)))
+            self.data[key] = val
 
     class MultiTypedList(UserList):
         type = type(None),
@@ -43,7 +59,7 @@ if __debug__:
                 raise TypeError('{} expect {} type but found {}.'.format(self.__class__.__name__, self.__class__.type[i], type(v)))
 
         def __init__(self, *args):
-            super().__init__()
+            super(MultiTypedList, self).__init__()
             for i, v in enumerate(args):
                 self._check(i, v)
             self.data = list(args)
@@ -54,66 +70,37 @@ if __debug__:
 
     class MultiTypedDict(UserDict):
         '''
-        Typed list and dictionary. The types are passed as class attributes. For
-        TypedList the 'type' class attribute is used, for MultiTypedDict each attribute
-        consists of an key. The keys types are not checked. Take a look at doctest
-        for examples.
+        Multi typed dict.
 
-        >>> class FooList(TypedList):
-        ...     type = int,
-        ...
-        >>> class FooMultiList(MultiTypedList):
-        ...     type = int,str
-        ...
-        >>> class FooDict(MultiTypedDict):
+        Types are defined using class attributes.
+
+        >>> class FooMTD(MultiTypedDict):
         ...     foo = int,
-        ...     bar = FooList,
-        ...     tar = FooMultiList,
-        ...     zar = str,type(None)
+        ...     bar = str,
         ...
-        >>> f = FooDict(foo=1, bar=FooList(1,2,3), tar=FooMultiList(1,'foo'), zar='hello')
-        >>> # {'foo': 1, 'bar': [1, 2, 3], 'tar': [1, 'foo'], 'zar': 'hello'}
+        >>> f = FooMTD(foo=1, bar='str')
+        >>> f == {'foo': 1, 'bar':'str'}
+        True
+        >>> f['foo'] = 'str' # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        TypeError: FooMTD["foo"] expect (<... 'int'>,) but <... 'str'> found.
         >>>
-        >>> f['foo'] = 'invalid' # Setting to invalid type raise exceptions.
+        >>> FooMTD(foo=1,bar=2) # doctest: +ELLIPSIS
         Traceback (most recent call last):
-        ...
-        TypeError: FooDict["foo"] expect one of (<class 'int'>,) but found <class 'str'>.
-        >>>
-        >>> f['bar'][0] = 'invalid' # Also true for TypedList.
-        Traceback (most recent call last):
-        ...
-        TypeError: FooList expect (<class 'int'>,) type but found <class 'str'>.
-        >>> 
-        >>> f['tar'][0] = 2 # No problem
-        >>> f['tar'][0] = 'invalid' # ops wrong value
-        Traceback (most recent call last):
-        ...
-        TypeError: FooMultiList expect <class 'int'> type but found <class 'str'>.
-        >>>
-        >>> FooDict(foo='invalid') # Instantiation is protected too.
-        Traceback (most recent call last):
-        ...
-        TypeError: FooDict["foo"] expect one of (<class 'int'>,) but found <class 'str'>.
-        >>>
-        >>> FooList('invalid') # Also true for lists.
-        Traceback (most recent call last):
-        ...
-        TypeError: FooList expect (<class 'int'>,) type but found <class 'str'>.
+        TypeError: FooMTD["bar"] expect (<... 'str'>,) but <... 'int'> found.
         ''' 
-
-        def _check(self, k, v):
-            t = getattr(self.__class__, k)
-            if not issubclass(type(v),t):
-                raise TypeError('{}["{}"] expect one of {} but found {}.'.format(self.__class__.__name__, k, t, type(v)))
-
         def __init__(self, **kwargs):
-            super().__init__()
-            for k,v in kwargs.items():
-                self._check(k,v)
-            self.data = kwargs.copy()
+            UserDict.__init__(self)
+            for k,v in six.iteritems(kwargs):
+                self[k] = v
 
-        def __setitem__(self, k,v):
-            self._check(k,v)
+        def __setitem__(self, k, v):
+            t = getattr(self.__class__, k)
+            vt = type(v)
+            if not issubclass(vt, t): 
+                raise TypeError('{}["{}"] expect {} but {} found.'.format(
+                        self.__class__.__name__, k, t, vt))
             self.data[k] = v
 else:
     TypedList = UserList
@@ -134,23 +121,23 @@ def checkarguments(*t_args, **t_kwargs):
     ...
     >>> foo(1,2,3)
     6
-    >>> foo('foo',2,3)
+    >>> foo('foo',2,3) # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    TypeError: foo positional argument 0 expects <class 'int'> but <class 'str'> found.
+    TypeError: foo positional argument 0 expects <... 'int'> but <... 'str'> found.
     >>>
     >>> @checkarguments(a=int, b=int, c=(int,type(None)))
-    ... def bar(*args,a,b,c):
+    ... def bar(a,b,c):
     ...     return a + b + (c if c is not None else 0)
     ...
     >>> bar(a=1,b=2,c=3)
     6
     >>> bar(a=1,b=2,c=None)
     3
-    >>> bar(a='str',b=2,c=3)
+    >>> bar(a='str',b=2,c=3) # doctest: +ELLIPSIS 
     Traceback (most recent call last):
     ...
-    TypeError: bar() keyword argument "a" expects <class 'int'> but <class 'str'> found.
+    TypeError: bar() keyword argument "a" expects <... 'int'> but <... 'str'> found.
     '''
     def decorator(func):
         if __debug__:
