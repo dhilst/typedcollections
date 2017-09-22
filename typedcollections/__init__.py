@@ -160,10 +160,18 @@ if __debug__:
                         self.__class__.__name__, k, t, vt))
             self.data[k] = v
 else:
-    TypedList = UserList
-    TypedDict = UserDict
-    MultiTypedDict = UserDict
-    MultiTypedList = UserList
+    class BaseDict(UserDict):
+        def __init__(self, **kwargs):
+            super(BaseDict, self).__init__(kwargs)
+
+    class BaseList(UserList):
+        def __init__(self, *args):
+            super(BaseList, self).__init__(args)
+
+    class MultiTypedDict(BaseDict): pass
+    class MultiTypedList(BaseList): pass
+    class TypedDict(BaseDict): pass
+    class TypedList(BaseList): pass
 
 def checkarguments(*t_args, **t_kwargs):
     '''Check arguments types with issubclass before calling the function.
