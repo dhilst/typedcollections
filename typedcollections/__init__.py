@@ -79,6 +79,11 @@ if __debug__:
         >>> foo = FooTD(foo=1,bar=2)
         >>> foo == {'foo': 1, 'bar': 2}
         True
+        >>> FooTD(foo='str',bar=2) # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        TypeError: FooTD keys expect type (<... 'int'>,) but found <... 'str'>.
+
         '''
 
         key_type = str,
@@ -88,7 +93,7 @@ if __debug__:
             if not issubclass(type(key), self.__class__.key_type):
                 raise TypeError('{} keys expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.key_type, type(key)))
             if not issubclass(type(val), self.__class__.value_type):
-                raise TypeError('{} keys expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.value_type, type(value)))
+                raise TypeError('{} keys expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.value_type, type(val)))
             self.data[key] = val
 
     class MultiTypedList(UserList):
