@@ -130,7 +130,12 @@ if __debug__:
             self._check(i, v)
             self.data[i] = v
 
-    class MultiTypedDict(UserDict):
+    class _MultiDictTypedMeta(type):
+        def __init__(cls, name, bases, attrs):
+            super(_MultiDictTypedMeta, cls).__init__(name, bases, attrs)
+            cls._keys = list(k for k in attrs.keys() if not k.startswith('__'))
+
+    class MultiTypedDict(six.with_metaclass(_MultiDictTypedMeta)):
         '''
         Multi typed dict.
 
@@ -150,12 +155,25 @@ if __debug__:
         >>>
         >>> FooMTD(foo=1,bar=2) # doctest: +ELLIPSIS
         Traceback (most recent call last):
+        ...
         TypeError: FooMTD["bar"] expect (<... 'str'>,) but <... 'int'> found.
+	>>> 
+	>>> # All keys are required
+        >>> FooMTD(foo=1) # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        ValueError: FooMTD missing values for the keys ['bar']
         ''' 
+        data = {}
+
         def __init__(self, **kwargs):
-            UserDict.__init__(self)
+            clskeys = set(self.__class__._keys)
+            kwkeys  = set(kwargs.keys())
+            if kwkeys != clskeys:
+                raise ValueError('{} missing values for the keys {}'.format(
+                    self.__class__.__name__, list(clskeys - kwkeys)))
             for k,v in six.iteritems(kwargs):
-                self[k] = v
+                self.data[k] = v
 
         def __setitem__(self, k, v):
             t = getattr(self.__class__, k)
