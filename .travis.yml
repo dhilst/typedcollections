@@ -19,4 +19,8 @@ script:
   - python -m typedcollections.__init__
   - python -m unittest typedcollections.test
   - python -OO -m unittest typedcollections.test
+  - ./test.sh coverage 
 
+after_success:
+  - pip install python-coveralls
+  - coveralls
