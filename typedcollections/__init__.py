@@ -48,9 +48,13 @@ if __debug__:
         >>> class FooTL(TypedList):
         ...     type = int,
         ...
+
+        Initialize as list constructor
         >>> foo = FooTL(1,2,3,4)
         >>> foo == [1,2,3,4]
         True
+    
+        >>> foo[0] = 10
         '''
         type = type(None),
 
@@ -77,14 +81,24 @@ if __debug__:
         >>> class FooTD(TypedDict):
         ...    value_type = int, # Types must be a tuple.
         ...
+
+        Construct as dict constructor.
         >>> foo = FooTD(foo=1,bar=2)
         >>> foo == {'foo': 1, 'bar': 2}
         True
+
+        Setting values is protected against wrong types. Both keys
+        and values.
+        >>> foo[1] = 10 # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        TypeError: FooTD keys expect type (<... 'str'>,) but found <... 'int'>.
+
+        Initialization is protected against wrong types.
         >>> FooTD(foo='str',bar=2) # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
-        TypeError: FooTD keys expect type (<... 'int'>,) but found <... 'str'>.
-
+        TypeError: FooTD values expect type (<... 'int'>,) but found <... 'str'>.
         '''
 
         key_type = str,
@@ -99,7 +113,7 @@ if __debug__:
             if not issubclass(type(key), self.__class__.key_type):
                 raise TypeError('{} keys expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.key_type, type(key)))
             if not issubclass(type(val), self.__class__.value_type):
-                raise TypeError('{} keys expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.value_type, type(val)))
+                raise TypeError('{} values expect type {} but found {}.'.format(self.__class__.__name__, self.__class__.value_type, type(val)))
             self.data[key] = val
 
     class MultiTypedList(UserList):
@@ -113,6 +127,9 @@ if __debug__:
         ...
         >>> f = FooMTL(1,1,'hello')
         >>> f == [1,1,'hello']
+        True
+        >>> f[0] = 2
+        >>> f == [2,1,'hello']
         True
         '''
         type = type(None),
@@ -147,24 +164,26 @@ if __debug__:
         ...     bar = str,
         ...
 
-	    Create instances with a dict like signature.
+        Create instances with a dict like signature.
         >>> f = FooMTD(foo=1, bar='str')
         >>> f == {'foo': 1, 'bar':'str'}
         True
-	
-	    Common dictionary operations are supported since this hinherit from
-	    UserDict.
+        
+        Common dictionary operations are supported since this inherit from
+        UserDict.
         >>> list(f.items()) == [('foo', 1), ('bar', 'str')]
         True
 
-	    Setting items trigger type assertion. If type is wrong TypeError
-	    is raised. The key is specified in the error message.
+        Setting items trigger type assertion. If type is wrong TypeError
+        is raised. The key is specified in the error message.
+
+        >>> f['foo'] = 2 # Okay
         >>> f['foo'] = 'str' # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
         TypeError: FooMTD["foo"] expect (<... 'int'>,) but <... 'str'> found.
 
-	    Also initializing triggers type assertion.
+        Also initializing triggers type assertion.
         >>> FooMTD(foo=1,bar=2) # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
