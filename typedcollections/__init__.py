@@ -31,6 +31,7 @@ happens. So no performance penality should be noticed.
 '''
 
 import six
+from abc import ABCMeta
 from functools import wraps
 try:
     from collections import UserDict, UserList
@@ -130,12 +131,12 @@ if __debug__:
             self._check(i, v)
             self.data[i] = v
 
-    class _MultiDictTypedMeta(type):
+    class _MultiDictTypedMeta(ABCMeta):
         def __init__(cls, name, bases, attrs):
             super(_MultiDictTypedMeta, cls).__init__(name, bases, attrs)
             cls._keys = list(k for k in attrs.keys() if not k.startswith('__'))
 
-    class MultiTypedDict(six.with_metaclass(_MultiDictTypedMeta)):
+    class MultiTypedDict(six.with_metaclass(_MultiDictTypedMeta, UserDict, object)):
         '''
         Multi typed dict.
 
@@ -145,24 +146,44 @@ if __debug__:
         ...     foo = int, # Types must be a tuple
         ...     bar = str,
         ...
+
+	    Create instances with a dict like signature.
         >>> f = FooMTD(foo=1, bar='str')
         >>> f == {'foo': 1, 'bar':'str'}
         True
+	
+	    Common dictionary operations are supported since this hinherit from
+	    UserDict.
+        >>> list(f.items()) == [('foo', 1), ('bar', 'str')]
+        True
+
+	    Setting items trigger type assertion. If type is wrong TypeError
+	    is raised. The key is specified in the error message.
         >>> f['foo'] = 'str' # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
         TypeError: FooMTD["foo"] expect (<... 'int'>,) but <... 'str'> found.
-        >>>
+
+	    Also initializing triggers type assertion.
         >>> FooMTD(foo=1,bar=2) # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
         TypeError: FooMTD["bar"] expect (<... 'str'>,) but <... 'int'> found.
-	>>> 
-	>>> # All keys are required
+
+        All the field are required. Initializing with missing values raises
+        ValueError.
         >>> FooMTD(foo=1) # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
         ValueError: FooMTD missing values for the keys ['bar']
+
+        Deleting is prohibited too.
+        >>> del f['foo']
+        Traceback (most recent call last):
+        ...
+        RuntimeError: You can't delete values from FooMTD.
+
+        All this properties garantees that the dictionary state is valid, always.
         ''' 
         data = {}
 
@@ -173,7 +194,7 @@ if __debug__:
                 raise ValueError('{} missing values for the keys {}'.format(
                     self.__class__.__name__, list(clskeys - kwkeys)))
             for k,v in six.iteritems(kwargs):
-                self.data[k] = v
+                self[k] = v
 
         def __setitem__(self, k, v):
             t = getattr(self.__class__, k)
@@ -182,6 +203,12 @@ if __debug__:
                 raise TypeError('{}["{}"] expect {} but {} found.'.format(
                         self.__class__.__name__, k, t, vt))
             self.data[k] = v
+
+        def __delitem__(self, k):
+            raise RuntimeError('You can\'t delete values from {}.'.format(
+                self.__class__.__name__))
+
+        
 else:
     class BaseDict(UserDict):
         def __init__(self, **kwargs):
