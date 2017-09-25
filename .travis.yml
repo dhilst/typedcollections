@@ -14,6 +14,8 @@ python:
 # command to install dependencies
 install:
   - pip install .
+  - pip install coverage
+  - pip install python-coveralls
 # command to run tests
 script:
   - python -m typedcollections.__init__
@@ -22,5 +24,4 @@ script:
   - ./test.sh coverage 
 
 after_success:
-  - pip install python-coveralls
   - coveralls
